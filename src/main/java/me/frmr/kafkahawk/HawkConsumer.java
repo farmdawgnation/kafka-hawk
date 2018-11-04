@@ -25,7 +25,7 @@ public class HawkConsumer implements AutoCloseable {
   static final Counter commitsCounter = Counter.build()
     .name("kafka_hawk_offset_commits_total")
     .help("Total number of offset commits")
-    .labelNames("consumer_group", "topic", "partition")
+    .labelNames("consumer_group", "topic")
     .register();
 
   ExecutorService consumerExecService = Executors.newSingleThreadExecutor();
@@ -41,8 +41,7 @@ public class HawkConsumer implements AutoCloseable {
     OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
     commitsCounter.labels(
       messageKey.key().group(),
-      messageKey.key().topicPartition().topic(),
-      Integer.toString(messageKey.key().topicPartition().partition())
+      messageKey.key().topicPartition().topic()
     ).inc();
   }
 
