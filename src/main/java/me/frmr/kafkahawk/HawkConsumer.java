@@ -37,6 +37,15 @@ public class HawkConsumer implements AutoCloseable {
     consumerProps = properties;
   }
 
+  void consumeSingleRecord(ConsumerRecord<byte[], byte[]> record) {
+    OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
+    commitsCounter.labels(
+      messageKey.key().group(),
+      messageKey.key().topicPartition().topic(),
+      Integer.toString(messageKey.key().topicPartition().partition())
+    ).inc();
+  }
+
   void consume() {
     Thread.currentThread().setName("hawk-consumer-thread");
     logger.info("Hawk consumer thread is starting up");
@@ -54,12 +63,7 @@ public class HawkConsumer implements AutoCloseable {
         logger.debug("Consumed {} records", records.count());
 
         for (ConsumerRecord<byte[], byte[]> record : records) {
-          OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
-          commitsCounter.labels(
-            messageKey.key().group(),
-            messageKey.key().topicPartition().topic(),
-            Integer.toString(messageKey.key().topicPartition().partition())
-          ).inc();
+          consumeSingleRecord(record);
         }
       }
     } catch(WakeupException wakeup) {
