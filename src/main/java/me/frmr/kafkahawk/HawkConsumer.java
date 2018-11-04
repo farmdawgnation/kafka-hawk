@@ -38,11 +38,15 @@ public class HawkConsumer implements AutoCloseable {
   }
 
   void consumeSingleRecord(ConsumerRecord<byte[], byte[]> record) {
-    OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
-    commitsCounter.labels(
-      messageKey.key().group(),
-      messageKey.key().topicPartition().topic()
-    ).inc();
+    try {
+      OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
+      commitsCounter.labels(
+        messageKey.key().group(),
+        messageKey.key().topicPartition().topic()
+      ).inc();
+    } catch(ClassCastException cce) {
+      logger.debug("Ignoring a thing that I couldn't interpret as an offset");
+    }
   }
 
   void consume() {
