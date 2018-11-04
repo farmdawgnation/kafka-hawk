@@ -27,5 +27,11 @@ public class Main {
     }
 
     logger.info("Prometheus HTTP server started.");
+
+    var kafkaConfig = config.getObject("hawk.kafka").unwrapped();
+    var hc = new HawkConsumer(kafkaConfig);
+    hc.start();
+
+    logger.info("HawkConsumer started");
   }
 }
