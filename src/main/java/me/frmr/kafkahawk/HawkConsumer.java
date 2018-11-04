@@ -2,6 +2,7 @@ package me.frmr.kafkahawk;
 
 import io.prometheus.client.Counter;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.*;
 import kafka.coordinator.group.GroupMetadataManager;
@@ -44,6 +45,8 @@ public class HawkConsumer implements AutoCloseable {
       var consumer = new KafkaConsumer<byte[], byte[]>(consumerProps);
     ) {
       currentConsumer = consumer;
+
+      consumer.subscribe(Arrays.asList("__consumer_offsets"));
 
       while(true) {
         ConsumerRecords<byte[], byte[]> records = consumer.poll(250);
