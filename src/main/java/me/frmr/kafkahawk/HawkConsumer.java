@@ -66,6 +66,7 @@ public class HawkConsumer implements AutoCloseable {
       logger.info("Received wakeup, terminating consumer");
     } catch(Exception ex) {
       logger.error("Unexpected exception on consumer thread", ex);
+      System.exit(255);
     } finally {
       currentConsumer = null;
     }
