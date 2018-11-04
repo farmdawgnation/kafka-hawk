@@ -27,6 +27,10 @@ dependencies {
 task uberJar(type: Jar) {
   appendix = 'uber'
 
+  manifest {
+    attributes 'Main-Class': 'me.frmr.kafkahawk.Main'
+  }
+
   from sourceSets.main.output
   from configurations.runtimeClasspath.
                                        findAll { it.name.endsWith('jar') }.
