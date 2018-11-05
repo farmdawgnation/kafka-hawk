@@ -9,9 +9,10 @@ it can calculate what the offset deltas are over time.
 
 ## Building
 
-If you wish to build the project you'll need:
+If you wish to build the project you'll need JDK 11.
 
-* JDK 11
+We also recommend Docker for running the local Kafka and Zookeeper instance
+for manual testing purposes.
 
 ## Deployment
 
