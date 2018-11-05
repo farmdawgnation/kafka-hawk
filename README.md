@@ -7,6 +7,12 @@ This application is useful for determining how frequently each consumer group
 in your Kafka cluster is committing the offsets and, for the chattiest ones,
 it can calculate what the offset deltas are over time.
 
+## Building
+
+If you wish to build the project you'll need:
+
+* JDK 11
+
 ## Deployment
 
 This application is packaged and designed to be deployed using a Docker image.
