@@ -2,6 +2,8 @@ package me.frmr.kafkahawk;
 
 import com.typesafe.config.ConfigFactory;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.LoggerFactory;
@@ -28,8 +30,15 @@ public class Main {
 
     logger.info("Prometheus HTTP server started.");
 
+    var deltasEnabled = config.getBoolean("hawk.features.deltas.enabled");
+    var deltaGroups = new HashSet<String>(
+      Arrays.asList(
+        config.getString("hawk.features.deltas.groups").split(",")
+      )
+    );
+
     var kafkaConfig = config.getObject("hawk.kafka").unwrapped();
-    var hc = new HawkConsumer(kafkaConfig);
+    var hc = new HawkConsumer(kafkaConfig, deltasEnabled, deltaGroups);
     hc.start();
 
     logger.info("HawkConsumer started");

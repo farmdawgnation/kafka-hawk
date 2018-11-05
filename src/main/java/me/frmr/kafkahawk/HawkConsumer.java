@@ -1,12 +1,16 @@
 package me.frmr.kafkahawk;
 
 import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 import kafka.coordinator.group.GroupMetadataManager;
 import kafka.coordinator.group.OffsetKey;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.clients.consumer.*;
 import org.slf4j.LoggerFactory;
@@ -28,22 +32,58 @@ public class HawkConsumer implements AutoCloseable {
     .labelNames("consumer_group", "topic")
     .register();
 
+  static final Gauge commitDeltas = Gauge.build()
+    .name("kafka_hawk_offset_commit_detlas")
+    .help("Delta between committed offsets between the previous and latest commits")
+    .labelNames("consumer_group", "topic", "partition")
+    .register();
+
   ExecutorService consumerExecService = Executors.newSingleThreadExecutor();
   Map<String, Object> consumerProps;
+  boolean deltasEnabled = false;
+  Set<String> deltaGroups;
+  Map<TopicPartition, Long> lastOffsets;
 
   volatile KafkaConsumer<byte[], byte[]> currentConsumer;
 
-  public HawkConsumer(Map<String,Object> properties) {
+  /**
+   * @param properties Properties to use when building the consumer
+   * @param deltasEnabled Whether or not the deltas feature is enabled
+   * @param deltaTopics Topics for which offset deltas will be tracked
+   */
+  public HawkConsumer(
+      Map<String,Object> properties,
+      boolean deltasEnabled,
+      Set<String> deltaGroups
+  ) {
     consumerProps = properties;
+    this.deltasEnabled = deltasEnabled;
+    this.deltaGroups = deltaGroups;
+
+    this.lastOffsets = new HashMap<>();
   }
 
   void consumeSingleRecord(ConsumerRecord<byte[], byte[]> record) {
     try {
       OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
-      commitsCounter.labels(
-        messageKey.key().group(),
-        messageKey.key().topicPartition().topic()
-      ).inc();
+      var group = messageKey.key().group();
+      var topic = messageKey.key().topicPartition().topic();
+
+      commitsCounter.labels(group, topic).inc();
+
+      if (deltasEnabled && deltaGroups.contains(group)) {
+        var offsetAndMetadata = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));
+        var topicPartition = messageKey.key().topicPartition();
+        var partition = Integer.toString(messageKey.key().topicPartition().partition());
+        var diff = 0l;
+
+        if (lastOffsets.containsKey(topicPartition)) {
+          diff = offsetAndMetadata.offset() - lastOffsets.get(topicPartition);
+        }
+
+        lastOffsets.put(topicPartition, offsetAndMetadata.offset());
+        commitDeltas.labels(group, topic, partition).set(diff);
+      }
     } catch(ClassCastException cce) {
       logger.debug("Ignoring a thing that I couldn't interpret as an offset");
     }
