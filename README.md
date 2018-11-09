@@ -29,6 +29,8 @@ The application can be configured by environment variables for most cases.
 * `CLUSTER_NAME` - (optional) The custom name for this cluster (if any).
   Useful for situations where multiple instances of Hawk are deployed to
   monitor different clusters. Defaults to "kafka".
+* `JSON_LOGGING` - (optional) If this environment variable is present, logback
+  will configure itself to use Logstash compatible JSON logs.
 
 The application also has an optional feature that can report on the offset
 commit deltas. You have to enable this per consumer group because it requires
