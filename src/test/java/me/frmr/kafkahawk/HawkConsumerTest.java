@@ -17,10 +17,10 @@ public class HawkConsumerTest {
 
     var record = new ConsumerRecord<byte[], byte[]>("__consumer_offsets", 0, 0l, key, value);
 
-    var sut = new HawkConsumer(null, false, null);
+    var sut = new HawkConsumer(null, false, null, "");
 
     sut.consumeSingleRecord(record);
 
-    assertEquals(1.0, HawkConsumer.commitsCounter.labels("console-consumer-45944", "test").get());
+    assertEquals(1.0, HawkConsumer.commitsCounter.labels("", "console-consumer-45944", "test").get());
   }
 }
