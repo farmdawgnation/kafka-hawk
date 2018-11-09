@@ -26,6 +26,9 @@ The application can be configured by environment variables for most cases.
 * `BOOTSTRAP_SERVERS` — (required) The bootstrap servers setting for hawk
 * `GROUP_ID` - (optional) The group id, defaults to "hawk"
 * `SASL_CONFIG` - (optional) The SASL config if needed
+* `CLUSTER_NAME` - (optional) The custom name for this cluster (if any).
+  Useful for situations where multiple instances of Hawk are deployed to
+  monitor different clusters. Defaults to "kafka".
 
 The application also has an optional feature that can report on the offset
 commit deltas. You have to enable this per consumer group because it requires

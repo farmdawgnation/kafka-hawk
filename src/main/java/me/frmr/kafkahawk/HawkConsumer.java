@@ -29,13 +29,13 @@ public class HawkConsumer implements AutoCloseable {
   static final Counter commitsCounter = Counter.build()
     .name("kafka_hawk_offset_commits_total")
     .help("Total number of offset commits")
-    .labelNames("consumer_group", "topic")
+    .labelNames("cluster", "consumer_group", "topic")
     .register();
 
   static final Gauge commitDeltas = Gauge.build()
     .name("kafka_hawk_offset_commit_detlas")
     .help("Delta between committed offsets between the previous and latest commits")
-    .labelNames("consumer_group", "topic", "partition")
+    .labelNames("cluster", "consumer_group", "topic", "partition")
     .register();
 
   ExecutorService consumerExecService = Executors.newSingleThreadExecutor();
@@ -43,6 +43,7 @@ public class HawkConsumer implements AutoCloseable {
   boolean deltasEnabled = false;
   Set<String> deltaGroups;
   Map<TopicPartition, Long> lastOffsets;
+  String clusterName;
 
   volatile KafkaConsumer<byte[], byte[]> currentConsumer;
 
@@ -54,11 +55,13 @@ public class HawkConsumer implements AutoCloseable {
   public HawkConsumer(
       Map<String,Object> properties,
       boolean deltasEnabled,
-      Set<String> deltaGroups
+      Set<String> deltaGroups,
+      String clusterName
   ) {
     consumerProps = properties;
     this.deltasEnabled = deltasEnabled;
     this.deltaGroups = deltaGroups;
+    this.clusterName = clusterName;
 
     this.lastOffsets = new HashMap<>();
   }
@@ -69,7 +72,7 @@ public class HawkConsumer implements AutoCloseable {
       var group = messageKey.key().group();
       var topic = messageKey.key().topicPartition().topic();
 
-      commitsCounter.labels(group, topic).inc();
+      commitsCounter.labels(clusterName, group, topic).inc();
 
       if (deltasEnabled && deltaGroups.contains(group)) {
         var offsetAndMetadata = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));
@@ -82,7 +85,7 @@ public class HawkConsumer implements AutoCloseable {
         }
 
         lastOffsets.put(topicPartition, offsetAndMetadata.offset());
-        commitDeltas.labels(group, topic, partition).set(diff);
+        commitDeltas.labels(clusterName, group, topic, partition).set(diff);
       }
     } catch(ClassCastException cce) {
       logger.debug("Ignoring a thing that I couldn't interpret as an offset");

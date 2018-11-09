@@ -38,7 +38,8 @@ public class Main {
     );
 
     var kafkaConfig = config.getObject("hawk.kafka").unwrapped();
-    var hc = new HawkConsumer(kafkaConfig, deltasEnabled, deltaGroups);
+    var clusterName = config.getString("hawk.cluster.name");
+    var hc = new HawkConsumer(kafkaConfig, deltasEnabled, deltaGroups, clusterName);
     hc.start();
 
     logger.info("HawkConsumer started");
