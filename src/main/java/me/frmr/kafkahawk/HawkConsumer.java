@@ -42,7 +42,7 @@ public class HawkConsumer implements AutoCloseable {
   Map<String, Object> consumerProps;
   boolean deltasEnabled = false;
   Set<String> deltaGroups;
-  Map<TopicPartition, Long> lastOffsets;
+  Map<String, Map<TopicPartition, Long>> lastOffsets;
   String clusterName;
 
   volatile KafkaConsumer<byte[], byte[]> currentConsumer;
@@ -80,11 +80,20 @@ public class HawkConsumer implements AutoCloseable {
         var partition = Integer.toString(messageKey.key().topicPartition().partition());
         var diff = 0l;
 
-        if (lastOffsets.containsKey(topicPartition)) {
-          diff = offsetAndMetadata.offset() - lastOffsets.get(topicPartition);
+        if (lastOffsets.containsKey(group)) {
+          var groupOffsets = lastOffsets.get(group);
+
+          if (groupOffsets.containsKey(topicPartition)) {
+            diff = offsetAndMetadata.offset() - groupOffsets.get(topicPartition);
+          }
+
+          groupOffsets.put(topicPartition, offsetAndMetadata.offset());
+        } else {
+          var groupOffsets = new HashMap<TopicPartition, Long>();
+          groupOffsets.put(topicPartition, offsetAndMetadata.offset());
+          lastOffsets.put(group, groupOffsets);
         }
 
-        lastOffsets.put(topicPartition, offsetAndMetadata.offset());
         commitDeltas.labels(clusterName, group, topic, partition).set(diff);
       }
     } catch(ClassCastException cce) {
