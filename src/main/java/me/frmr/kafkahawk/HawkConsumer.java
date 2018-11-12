@@ -8,11 +8,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
+import kafka.common.OffsetAndMetadata;
 import kafka.coordinator.group.GroupMetadataManager;
 import kafka.coordinator.group.OffsetKey;
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.*;
 import org.apache.kafka.common.errors.WakeupException;
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -66,35 +69,48 @@ public class HawkConsumer implements AutoCloseable {
     this.lastOffsets = new HashMap<>();
   }
 
+  void trackCommit(OffsetKey messageKey) {
+    var group = messageKey.key().group();
+    var topic = messageKey.key().topicPartition().topic();
+
+    commitsCounter.labels(clusterName, group, topic).inc();
+  }
+
+  void trackDeltas(OffsetKey messageKey, OffsetAndMetadata offsetAndMetadata) {
+    var group = messageKey.key().group();
+
+    if (deltaGroups.contains(group)) {
+      var topicPartition = messageKey.key().topicPartition();
+      var topic = topicPartition.topic();
+      var partition = Integer.toString(topicPartition.partition());
+      var diff = 0l;
+
+      if (lastOffsets.containsKey(group)) {
+        var groupOffsets = lastOffsets.get(group);
+
+        if (groupOffsets.containsKey(topicPartition)) {
+          diff = offsetAndMetadata.offset() - groupOffsets.get(topicPartition);
+        }
+
+        groupOffsets.put(topicPartition, offsetAndMetadata.offset());
+      } else {
+        var groupOffsets = new HashMap<TopicPartition, Long>();
+        groupOffsets.put(topicPartition, offsetAndMetadata.offset());
+        lastOffsets.put(group, groupOffsets);
+      }
+
+      commitDeltas.labels(clusterName, group, topic, partition).set(diff);
+    }
+  }
+
   void consumeSingleRecord(ConsumerRecord<byte[], byte[]> record) {
     try {
       OffsetKey messageKey = (OffsetKey)GroupMetadataManager.readMessageKey(ByteBuffer.wrap(record.key()));
-      var group = messageKey.key().group();
-      var topic = messageKey.key().topicPartition().topic();
+      trackCommit(messageKey);
 
-      commitsCounter.labels(clusterName, group, topic).inc();
-
-      if (deltasEnabled && deltaGroups.contains(group)) {
+      if (deltasEnabled) {
         var offsetAndMetadata = GroupMetadataManager.readOffsetMessageValue(ByteBuffer.wrap(record.value()));
-        var topicPartition = messageKey.key().topicPartition();
-        var partition = Integer.toString(messageKey.key().topicPartition().partition());
-        var diff = 0l;
-
-        if (lastOffsets.containsKey(group)) {
-          var groupOffsets = lastOffsets.get(group);
-
-          if (groupOffsets.containsKey(topicPartition)) {
-            diff = offsetAndMetadata.offset() - groupOffsets.get(topicPartition);
-          }
-
-          groupOffsets.put(topicPartition, offsetAndMetadata.offset());
-        } else {
-          var groupOffsets = new HashMap<TopicPartition, Long>();
-          groupOffsets.put(topicPartition, offsetAndMetadata.offset());
-          lastOffsets.put(group, groupOffsets);
-        }
-
-        commitDeltas.labels(clusterName, group, topic, partition).set(diff);
+        trackDeltas(messageKey, offsetAndMetadata);
       }
     } catch(ClassCastException cce) {
       logger.debug("Ignoring a thing that I couldn't interpret as an offset");
