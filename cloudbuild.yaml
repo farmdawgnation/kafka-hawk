@@ -1,6 +1,8 @@
 steps:
 - name: 'openjdk:11'
-  args: ['bash', '-c', 'cd /workspace; ./gradlew build --no-daemon']
+  args: ['bash', '-c', 'cd /workspace; ./gradlew compileJava --no-daemon']
+- name: 'openjdk:11'
+  args: ['bash', '-c', 'cd /workspace; ./gradlew uberJar --no-daemon']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'gcr.io/$PROJECT_ID/kafka-hawk', '.']
 images: ['gcr.io/$PROJECT_ID/kafka-hawk']
