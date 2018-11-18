@@ -1,0 +1,3 @@
+steps:
+- name: 'openjdk:11'
+  args: ['bash', '-c', 'cd /workspace; ./gradlew build']
