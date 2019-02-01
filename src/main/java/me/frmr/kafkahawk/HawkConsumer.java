@@ -3,6 +3,7 @@ package me.frmr.kafkahawk;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -118,6 +119,7 @@ public class HawkConsumer implements AutoCloseable {
   }
 
   void consume() {
+    final var pollTimeout = Duration.ofMillis(250);
     Thread.currentThread().setName("hawk-consumer-thread");
     logger.info("Hawk consumer thread is starting up");
 
@@ -129,7 +131,7 @@ public class HawkConsumer implements AutoCloseable {
       consumer.subscribe(Arrays.asList("__consumer_offsets"));
 
       while(true) {
-        ConsumerRecords<byte[], byte[]> records = consumer.poll(250);
+        ConsumerRecords<byte[], byte[]> records = consumer.poll(pollTimeout);
 
         logger.debug("Consumed {} records", records.count());
 
