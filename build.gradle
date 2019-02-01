@@ -48,3 +48,7 @@ task uberJar(type: Jar) {
 }
 
 mainClassName = "me.frmr.kafkahawk.Main"
+
+tasks.withType(JavaCompile) {
+  options.compilerArgs += ['-Xlint:deprecation']
+}
