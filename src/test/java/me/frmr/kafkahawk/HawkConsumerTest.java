@@ -47,7 +47,7 @@ public class HawkConsumerTest {
     assertNotNull(sut.lastOffsets.get("console-consumer-45944").get(new TopicPartition("test", 0)));
 
     var recordedOffset = sut.lastOffsets.get("console-consumer-45944").get(new TopicPartition("test", 0));
-    assertEquals(new Long(0), recordedOffset);
+    assertEquals(Long.valueOf(0), recordedOffset);
     assertEquals(0.0, HawkConsumer.commitDeltas.labels("", "console-consumer-45944", "test", "0").get());
   }
 
